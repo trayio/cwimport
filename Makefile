@@ -1,5 +1,5 @@
 SOURCES := $(filter-out $(wildcard *_test.go),$(wildcard *.go))
-TARGET := $(shell basename `pwd`)
+TARGET := cwimport
 
 GO := $(shell command -v go)
 GO_VERSION := 1.6.0 # for docker image only
@@ -9,7 +9,7 @@ ifndef GO
 endif
 
 $(TARGET): $(SOURCES)
-	CGO_ENABLED=0 $(GO) build --ldflags '-extldflags "-static"'
+	CGO_ENABLED=0 $(GO) build --ldflags '-extldflags "-static"' -o $(TARGET)
 
 clean:
 	rm -f $(TARGET)
