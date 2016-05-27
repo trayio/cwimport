@@ -23,6 +23,7 @@ import (
 type configuration struct {
 	PrometheusUrl string  `hcl:"prometheus_url"`
 	Metrics       metrics `hcl:"metrics"`
+	Region        string  `hcl:"aws_region"`
 }
 
 type metrics map[string]metric
@@ -173,16 +174,19 @@ func main() {
 		qm         chan struct{}                       // quit main channel
 		mc         chan *cloudwatch.PutMetricDataInput // metric channel
 		configFile string
-		region     string
 	)
 
 	flag.StringVar(&configFile, "config", "config.hcl", "Configuration file")
-	flag.StringVar(&region, "region", "eu-west-1", "AWS region")
 	flag.Parse()
 
 	conf, err = NewConfig(configFile)
 	if err != nil {
 		fmt.Println("Failed reading configuration:", err)
+		os.Exit(1)
+	}
+
+	if conf.Region == "" {
+		fmt.Println("Missing aws_region parameter")
 		os.Exit(1)
 	}
 
@@ -194,7 +198,7 @@ func main() {
 	}
 
 	fmt.Println("Creating CloudWatch client")
-	cw, err := NewCloudWatchClient(region)
+	cw, err := NewCloudWatchClient(conf.Region)
 	if err != nil {
 		fmt.Println("Failed to get AWS credentials:", err)
 		os.Exit(1)
