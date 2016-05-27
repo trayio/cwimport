@@ -1,4 +1,5 @@
 prometheus_url = "http://localhost:9090"
+aws_region = "eu-west-1"
 
 metrics {
   go_gc_duration_seconds {
