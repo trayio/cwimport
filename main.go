@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -38,6 +39,30 @@ type metric struct {
 	quitChan <-chan struct{}
 	wg       *sync.WaitGroup
 	name     string
+}
+
+func (m *metric) validate() error {
+	if m.Query == "" {
+		return errors.New("query missing")
+	}
+
+	if m.Asg == "" {
+		return errors.New("auto scaling group missing")
+	}
+
+	if m.Namespace == "" {
+		return errors.New("namespace missing")
+	}
+
+	if m.Unit == "" {
+		return errors.New("unit missing")
+	}
+
+	if m.Interval == 0 {
+		m.Interval = 1
+	}
+
+	return nil
 }
 
 type Collector interface {
@@ -109,7 +134,10 @@ func NewConfig(filename string) (*configuration, error) {
 
 	// simple check if all are metrics
 	for m, _ := range conf.Metrics {
-		var _ metric = conf.Metrics[m]
+		var x metric = conf.Metrics[m]
+		if err := x.validate(); err != nil {
+			return conf, errors.New(fmt.Sprintf("%s: %s", m, err))
+		}
 	}
 
 	return conf, err
