@@ -3,6 +3,8 @@ TARGET := cwimport
 
 GO_VERSION := 1.6.2 # for docker image only
 
+default: clean test $(TARGET)
+
 $(TARGET): $(SOURCES)
 	docker run \
 		--rm \
@@ -21,3 +23,5 @@ test:
 
 clean:
 	rm -f $(TARGET)
+
+.PHONY: test clean default
