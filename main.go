@@ -41,25 +41,48 @@ type metric struct {
 	name     string
 }
 
-func (m *metric) validate() error {
+// error definitions should be put here
+var (
+	queryMissing         = errors.New("query missing")
+	asgMissing           = errors.New("asg missing")
+	namespaceMissing     = errors.New("namespace missing")
+	unitMissing          = errors.New("unit missing")
+	intervalMissing      = errors.New("interval missing or has a value of 0")
+	awsRegionMissing     = errors.New("aws_region missing")
+	prometheusUrlMissing = errors.New("prometheus_url missing")
+)
+
+func (c configuration) validate() error {
+	if c.Region == "" {
+		return awsRegionMissing
+	}
+
+	if c.PrometheusUrl == "" {
+		return prometheusUrlMissing
+	}
+
+	return nil
+}
+
+func (m metric) validate() error {
 	if m.Query == "" {
-		return errors.New("query missing")
+		return queryMissing
 	}
 
 	if m.Asg == "" {
-		return errors.New("asg missing")
+		return asgMissing
 	}
 
 	if m.Namespace == "" {
-		return errors.New("namespace missing")
+		return namespaceMissing
 	}
 
 	if m.Unit == "" {
-		return errors.New("unit missing")
+		return unitMissing
 	}
 
 	if m.Interval == 0 {
-		return errors.New("interval missing or has a value of 0")
+		return intervalMissing
 	}
 
 	return nil
@@ -124,20 +147,15 @@ func NewConfig(filename string) (*configuration, error) {
 
 	data, err = ioutil.ReadFile(filename)
 	if err != nil {
-		return nil, err
+		return conf, err
 	}
 
-	err = hcl.Decode(&conf, string(data))
-	if err != nil {
-		return nil, err
+	if err := hcl.Decode(&conf, string(data)); err != nil {
+		return conf, err
 	}
 
-	if conf.Region == "" {
-		return conf, errors.New("aws_region missing")
-	}
-
-	if conf.PrometheusUrl == "" {
-		return conf, errors.New("prometheus_url missing")
+	if err := conf.validate(); err != nil {
+		return conf, err
 	}
 
 	// simple check if all are metrics
