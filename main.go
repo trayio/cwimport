@@ -47,7 +47,7 @@ func (m *metric) validate() error {
 	}
 
 	if m.Asg == "" {
-		return errors.New("auto scaling group missing")
+		return errors.New("asg missing")
 	}
 
 	if m.Namespace == "" {
@@ -59,7 +59,7 @@ func (m *metric) validate() error {
 	}
 
 	if m.Interval == 0 {
-		m.Interval = 1
+		return errors.New("interval missing or has a value of 0")
 	}
 
 	return nil
@@ -132,6 +132,14 @@ func NewConfig(filename string) (*configuration, error) {
 		return nil, err
 	}
 
+	if conf.Region == "" {
+		return conf, errors.New("aws_region missing")
+	}
+
+	if conf.PrometheusUrl == "" {
+		return conf, errors.New("prometheus_url missing")
+	}
+
 	// simple check if all are metrics
 	for m, _ := range conf.Metrics {
 		var x metric = conf.Metrics[m]
@@ -202,20 +210,22 @@ func main() {
 		qm         chan struct{}                       // quit main channel
 		mc         chan *cloudwatch.PutMetricDataInput // metric channel
 		configFile string
+		testOnly   bool
 	)
 
 	flag.StringVar(&configFile, "config", "config.hcl", "Configuration file")
+	flag.BoolVar(&testOnly, "t", false, "Test configuration and exit")
 	flag.Parse()
 
 	conf, err = NewConfig(configFile)
 	if err != nil {
-		fmt.Println("Failed reading configuration:", err)
+		fmt.Println("Configuration error:", err)
 		os.Exit(1)
 	}
 
-	if conf.Region == "" {
-		fmt.Println("Missing aws_region parameter")
-		os.Exit(1)
+	if testOnly {
+		fmt.Printf("Configuration %s OK\n", configFile)
+		os.Exit(0)
 	}
 
 	fmt.Println("Creating prometheus collector with url:", conf.PrometheusUrl)
