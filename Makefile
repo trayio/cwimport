@@ -1,7 +1,7 @@
 SOURCES := $(filter-out $(wildcard *_test.go),$(wildcard *.go))
 TARGET := cwimport
 
-GO_VERSION := 1.6.2 # for docker image only
+GO_VERSION := 1.7 # for docker image only
 
 default: clean test $(TARGET)
 

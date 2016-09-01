@@ -15,6 +15,7 @@ func TestMetricValidation(t *testing.T) {
 	// - Asg (asg)
 	// - Namespace (namespace)
 	// - Unit (unit)
+	// - Unit (valid unit name)
 	// - Interval (interval)
 	var m metric = metric{}
 	var noErrMsg = "No error returned while validating incomplete metric"
@@ -62,10 +63,12 @@ func TestMetricValidation(t *testing.T) {
 	if err := m.validate(); err == nil {
 		t.Fatal(noErrMsg)
 	} else {
-		if err != intervalMissing {
-			t.Fatal(wrongErr(intervalMissing, err))
+		if err != invalidUnit {
+			t.Fatal(wrongErr(invalidUnit, err))
 		}
 	}
+
+	m.Unit = "None"
 
 	m.Interval = 1
 

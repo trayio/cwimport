@@ -1,10 +1,8 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"sync"
@@ -16,77 +14,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
-	"github.com/hashicorp/hcl"
 	"github.com/prometheus/client_golang/api/prometheus"
 	"github.com/prometheus/common/model"
 )
-
-type configuration struct {
-	PrometheusUrl string  `hcl:"prometheus_url"`
-	Metrics       metrics `hcl:"metrics"`
-	Region        string  `hcl:"aws_region"`
-}
-
-type metrics map[string]metric
-
-type metric struct {
-	Query     string `hcl:"query"`
-	Asg       string `hcl:"asg"`
-	Namespace string `hcl:"namespace"`
-	Unit      string `hcl:"unit"`
-	Interval  int
-
-	quitChan <-chan struct{}
-	wg       *sync.WaitGroup
-	name     string
-}
-
-// error definitions should be put here
-var (
-	queryMissing         = errors.New("query missing")
-	asgMissing           = errors.New("asg missing")
-	namespaceMissing     = errors.New("namespace missing")
-	unitMissing          = errors.New("unit missing")
-	intervalMissing      = errors.New("interval missing or has a value of 0")
-	awsRegionMissing     = errors.New("aws_region missing")
-	prometheusUrlMissing = errors.New("prometheus_url missing")
-)
-
-func (c configuration) validate() error {
-	if c.Region == "" {
-		return awsRegionMissing
-	}
-
-	if c.PrometheusUrl == "" {
-		return prometheusUrlMissing
-	}
-
-	return nil
-}
-
-func (m metric) validate() error {
-	if m.Query == "" {
-		return queryMissing
-	}
-
-	if m.Asg == "" {
-		return asgMissing
-	}
-
-	if m.Namespace == "" {
-		return namespaceMissing
-	}
-
-	if m.Unit == "" {
-		return unitMissing
-	}
-
-	if m.Interval == 0 {
-		return intervalMissing
-	}
-
-	return nil
-}
 
 type Collector interface {
 	Collect(string) []float64
@@ -136,37 +66,6 @@ func NewPrometheusCollector(url string) (*PrometheusCollector, error) {
 	return &PrometheusCollector{
 		q: prometheus.NewQueryAPI(client),
 	}, nil
-}
-
-func NewConfig(filename string) (*configuration, error) {
-	var (
-		conf *configuration
-		data []byte
-		err  error
-	)
-
-	data, err = ioutil.ReadFile(filename)
-	if err != nil {
-		return conf, err
-	}
-
-	if err := hcl.Decode(&conf, string(data)); err != nil {
-		return conf, err
-	}
-
-	if err := conf.validate(); err != nil {
-		return conf, err
-	}
-
-	// simple check if all are metrics
-	for m, _ := range conf.Metrics {
-		var x metric = conf.Metrics[m]
-		if err := x.validate(); err != nil {
-			return conf, errors.New(fmt.Sprintf("%s: %s", m, err))
-		}
-	}
-
-	return conf, err
 }
 
 // https://docs.aws.amazon.com/sdk-for-go/api/service/cloudwatch/CloudWatch.html#PutMetricData-instance_method
