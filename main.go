@@ -18,6 +18,8 @@ import (
 	"github.com/prometheus/common/model"
 )
 
+const metricDataLimit = 20
+
 type Collector interface {
 	Collect(string) []float64
 }
@@ -94,13 +96,16 @@ func (m metric) Run(c Collector, ch chan<- *cloudwatch.PutMetricDataInput) {
 
 				metricData = append(metricData, metric)
 
-				if len(metricData) == 20 {
+				if len(metricData) == metricDataLimit {
 					ch <- &cloudwatch.PutMetricDataInput{MetricData: metricData, Namespace: aws.String(m.Namespace)}
 					metricData = nil
 				}
+
 			}
 
-			ch <- &cloudwatch.PutMetricDataInput{MetricData: metricData, Namespace: aws.String(m.Namespace)}
+			if len(metricData) != 0 {
+				ch <- &cloudwatch.PutMetricDataInput{MetricData: metricData, Namespace: aws.String(m.Namespace)}
+			}
 
 		case <-m.quitChan:
 			fmt.Printf("%s ", m.name)
